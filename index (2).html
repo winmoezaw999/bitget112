@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bitget-like Crypto Dashboard</title>
+<style>
+  :root{--primary:#1677ff; --bg:#fff; --muted:#6b7280; --down:#ef4444; --up:#16a34a;}
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:#f7f8fc;color:#0f172a}
+  .wrap{max-width:980px;margin:0 auto;padding:16px}
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .logo{width:34px;height:34px;border-radius:10px;background:#22d3ee;display:grid;place-items:center;font-weight:800;color:#0b7285}
+  .brand b{font-size:20px}
+  .top-rt{display:flex;align-items:center;gap:10px}
+  .pill{display:flex;align-items:center;gap:6px;border:1px solid #e5e7eb;background:#fff;border-radius:12px;padding:6px 10px}
+  select,button{font:inherit}
+  .link{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#111;border:1px solid #e5e7eb;background:#fff;border-radius:12px;padding:6px 12px;cursor:pointer}
+  .link:hover{box-shadow:0 2px 10px rgba(0,0,0,.06)}
+  .hero{border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#0ea5e9,#3b82f6);color:#fff;padding:26px 22px;margin:8px 0 18px}
+  .hero h2{margin:0 0 6px;font-size:26px}
+  .hero p{margin:0;opacity:.9}
+  .actions{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:16px 0}
+  .act{display:grid;justify-items:center;gap:6px;background:#fff;border-radius:14px;padding:14px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+  .act .ic{font-size:20px}
+  .tabs{display:flex;gap:18px;margin-top:6px}
+  .tabs button{border:none;background:none;color:#111;cursor:pointer;padding:8px 0;font-weight:500}
+  .tabs .active{border-bottom:2px solid #ef4444}
+  .table{margin-top:8px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+  .thead,.row{display:grid;grid-template-columns:200px 1fr 140px;align-items:center;padding:12px 16px}
+  .thead{background:#f1f5f9;color:#334155;font-weight:600}
+  .row{border-top:1px solid #eef2f7}
+  .sym{display:flex;align-items:center;gap:10px}
+  .sym img{width:22px;height:22px;border-radius:50%}
+  .chg{justify-self:end;padding:6px 12px;border-radius:999px;color:#fff;font-weight:600}
+  .chg.up{background:var(--up)} .chg.down{background:var(--down)}
+  .bottom{position:sticky;bottom:0;background:#fff;border-top:1px solid #e5e7eb;margin-top:24px}
+  .bottom ul{display:grid;grid-template-columns:repeat(5,1fr);margin:0;padding:8px 0;list-style:none}
+  .bottom li{display:grid;justify-items:center;color:#64748b}
+  .bottom b{color:#1677ff}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Top bar -->
+    <div class="top">
+      <div class="brand">
+        <div class="logo">S</div><b>Bitget</b>
+      </div>
+      <div class="top-rt">
+        <div class="pill">
+          <span>🌐</span>
+          <select id="lang">
+            <option value="en">English</option>
+            <option value="ru">Russian</option>
+            <option value="ko">Korean</option>
+          </select>
+        </div>
+        <!-- Service goes directly to Telegram -->
+        <a href="https://t.me/kim232156" target="_blank" rel="noopener" id="svcBtn" class="link">
+          💬 <span data-i="service">Customer Service</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero">
+      <h2 data-i="heroTitle">We provide you with the tools to get ahead</h2>
+      <p data-i="heroSub">The home of digital asset trading</p>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="actions">
+      <div class="act"><div class="ic">⬇️</div><div data-i="deposit">Deposit</div></div>
+      <div class="act"><div class="ic">⬆️</div><div data-i="withdraw">Withdraw</div></div>
+      <div class="act"><div class="ic">📄</div><div data-i="contract">Contract</div></div>
+      <div class="act"><div class="ic">🛟</div><div data-i="service">Customer Service</div></div>
+      <div class="act"><div class="ic">➕</div><div data-i="more">More</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="active" data-i="mainstream">Mainstream Coins</button>
+      <button data-i="watch">Watchlist</button>
+      <button data-i="trending">Trending Coins</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table">
+      <div class="thead">
+        <div data-i="name">Name</div>
+        <div data-i="latest">Latest Price</div>
+        <div data-i="change">Today’s Change</div>
+      </div>
+      <div id="rows"></div>
+    </div>
+
+    <!-- Bottom nav (visual only) -->
+    <nav class="bottom">
+      <ul>
+        <li><div>🏠</div><b data-i="home">Home</b></li>
+        <li><div>📈</div><span data-i="market">Market</span></li>
+        <li><div>💼</div><span data-i="spot">Spot</span></li>
+        <li><div>📃</div><span data-i="futures">Futures</span></li>
+        <li><div>👛</div><span data-i="assets">Assets</span></li>
+      </ul>
+    </nav>
+  </div>
+
+<script>
+/* ---------- i18n (en, ru, ko) ---------- */
+const i18n = {
+  en:{service:"Customer Service", heroTitle:"We provide you with the tools to get ahead",
+      heroSub:"The home of digital asset trading", deposit:"Deposit", withdraw:"Withdraw",
+      contract:"Contract", more:"More", mainstream:"Mainstream Coins", watch:"Watchlist",
+      trending:"Trending Coins", name:"Name", latest:"Latest Price", change:"Today’s Change",
+      home:"Home", market:"Market", spot:"Spot", futures:"Futures", assets:"Assets"},
+  ru:{service:"Служба поддержки", heroTitle:"Мы даем вам инструменты, чтобы идти вперед",
+      heroSub:"Дом торговли цифровыми активами", deposit:"Депозит", withdraw:"Вывод",
+      contract:"Контракт", more:"Ещё", mainstream:"Основные монеты", watch:"Список наблюдения",
+      trending:"В тренде", name:"Название", latest:"Последняя цена", change:"Изменение за день",
+      home:"Главная", market:"Рынок", spot:"Спот", futures:"Фьючерсы", assets:"Активы"},
+  ko:{service:"고객센터", heroTitle:"앞서 나가기 위한 도구를 제공합니다",
+      heroSub:"디지털 자산 거래의 홈", deposit:"입금", withdraw:"출금",
+      contract:"선물/계약", more:"더보기", mainstream:"주요 코인", watch:"관심 목록",
+      trending:"인기 코인", name:"이름", latest:"최근 가격", change:"하루 변동",
+      home:"홈", market:"마켓", spot:"스팟", futures:"선물", assets:"자산"}
+};
+function applyLang(code){
+  const t=i18n[code]||i18n.en;
+  document.querySelectorAll("[data-i]").forEach(el=>{
+    const key=el.dataset.i; if(t[key]) el.textContent=t[key];
+  });
+}
+document.getElementById("lang").addEventListener("change",e=>applyLang(e.target.value));
+applyLang("en");
+
+/* ---------- Crypto price table (CoinGecko) ---------- */
+const coins = [
+  { id:"bitcoin-cash",  sym:"BCH/USDT", name:"Bitcoin Cash", icon:"https://assets.coingecko.com/coins/images/780/large/bitcoin-cash-circle.png" },
+  { id:"ethereum",      sym:"ETH/USDT", name:"Ethereum",     icon:"https://assets.coingecko.com/coins/images/279/large/ethereum.png" },
+  { id:"bitcoin",       sym:"BTC/USDT", name:"Bitcoin",      icon:"https://assets.coingecko.com/coins/images/1/large/bitcoin.png" },
+  { id:"solana",        sym:"SOL/USDT", name:"Solana",       icon:"https://assets.coingecko.com/coins/images/4128/large/solana.png" },
+  { id:"toncoin",       sym:"TON/USDT", name:"TON",          icon:"https://assets.coingecko.com/coins/images/17980/large/ton_symbol.png" }
+];
+const rows = document.getElementById("rows");
+
+function rowTemplate(c, price=0, chg=0){
+  const dir = chg>=0 ? "up" : "down";
+  const pct = (chg>=0?"+":"") + chg.toFixed(2) + "%";
+  const p   = price.toLocaleString(undefined,{maximumFractionDigits:8});
+  return `<div class="row" id="r-${c.id}">
+    <div class="sym"><img src="${c.icon}" alt=""><div><div>${c.sym}</div><div class="muted" style="font-size:12px">${c.name}</div></div></div>
+    <div>$ ${p}</div>
+    <div class="chg ${dir}">${pct}</div>
+  </div>`;
+}
+rows.innerHTML = coins.map(c=>rowTemplate(c)).join("");
+
+async function loadPrices(){
+  try{
+    const ids = coins.map(c=>c.id).join(",");
+    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
+    const res = await fetch(url,{cache:"no-store"});
+    const data = await res.json();
+    coins.forEach(c=>{
+      const r = document.getElementById("r-"+c.id);
+      const p = data[c.id]?.usd ?? 0;
+      const ch= data[c.id]?.usd_24h_change ?? 0;
+      r.children[1].textContent = "$ " + Number(p).toLocaleString(undefined,{maximumFractionDigits:8});
+      const pill = r.children[2];
+      pill.classList.toggle("up", ch>=0);
+      pill.classList.toggle("down", ch<0);
+      pill.textContent = (ch>=0?"+":"") + Number(ch).toFixed(2) + "%";
+    });
+  }catch(e){ console.error("Price fetch failed", e); }
+}
+loadPrices();
+setInterval(loadPrices, 30000); // refresh every 30s
+</script>
+</body>
+</html>
