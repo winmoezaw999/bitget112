@@ -1,39 +1,64 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bitget-like Crypto Dashboard</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Bitget-like App</title>
 <style>
-  :root{--primary:#1677ff; --bg:#fff; --muted:#6b7280; --down:#ef4444; --up:#16a34a;}
+  :root{ --primary:#1677ff; --bg:#fff; --muted:#6b7280; --down:#ef4444; --up:#16a34a; }
   *{box-sizing:border-box} body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:#f7f8fc;color:#0f172a}
+  a{color:inherit}
   .wrap{max-width:980px;margin:0 auto;padding:16px}
+
+  /* screens */
+  .screen{display:none} .screen.active{display:block}
+
+  /* Card (Login/Register) */
+  .card{max-width:420px;margin:48px auto;background:#fff;border-radius:16px;padding:22px;box-shadow:0 8px 28px rgba(0,0,0,.08)}
+  .logo{width:52px;height:52px;border-radius:12px;background:#22d3ee;display:grid;place-items:center;color:#0b7285;font-weight:800;margin:0 auto 8px}
+  .brand{font-size:22px;text-align:center;margin-bottom:12px}
+  .field{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:12px;margin:8px 0}
+  .btn{width:100%;padding:12px;border:none;border-radius:999px;background:var(--primary);color:#fff;cursor:pointer}
+  .row-btw{display:flex;justify-content:space-between;font-size:14px}
+
+  /* top bar */
   .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-  .brand{display:flex;align-items:center;gap:10px}
-  .logo{width:34px;height:34px;border-radius:10px;background:#22d3ee;display:grid;place-items:center;font-weight:800;color:#0b7285}
-  .brand b{font-size:20px}
+  .brand-mini{display:flex;align-items:center;gap:10px}
+  .logo-sm{width:34px;height:34px;border-radius:10px;background:#22d3ee;display:grid;place-items:center;font-weight:800;color:#0b7285}
+  .brand-mini b{font-size:20px}
   .top-rt{display:flex;align-items:center;gap:10px}
   .pill{display:flex;align-items:center;gap:6px;border:1px solid #e5e7eb;background:#fff;border-radius:12px;padding:6px 10px}
   select,button{font:inherit}
-  .link{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#111;border:1px solid #e5e7eb;background:#fff;border-radius:12px;padding:6px 12px;cursor:pointer}
+  .link{border:none;background:#fff;color:#111;border:1px solid #e5e7eb;border-radius:12px;padding:6px 12px;cursor:pointer}
   .link:hover{box-shadow:0 2px 10px rgba(0,0,0,.06)}
+
+  /* hero */
   .hero{border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#0ea5e9,#3b82f6);color:#fff;padding:26px 22px;margin:8px 0 18px}
   .hero h2{margin:0 0 6px;font-size:26px}
   .hero p{margin:0;opacity:.9}
+
+  /* quick actions */
   .actions{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:16px 0}
   .act{display:grid;justify-items:center;gap:6px;background:#fff;border-radius:14px;padding:14px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
   .act .ic{font-size:20px}
+
+  /* tabs */
   .tabs{display:flex;gap:18px;margin-top:6px}
   .tabs button{border:none;background:none;color:#111;cursor:pointer;padding:8px 0;font-weight:500}
   .tabs .active{border-bottom:2px solid #ef4444}
+
+  /* table */
   .table{margin-top:8px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.06)}
   .thead,.row{display:grid;grid-template-columns:200px 1fr 140px;align-items:center;padding:12px 16px}
   .thead{background:#f1f5f9;color:#334155;font-weight:600}
   .row{border-top:1px solid #eef2f7}
   .sym{display:flex;align-items:center;gap:10px}
   .sym img{width:22px;height:22px;border-radius:50%}
+  .muted{color:#64748b}
   .chg{justify-self:end;padding:6px 12px;border-radius:999px;color:#fff;font-weight:600}
   .chg.up{background:var(--up)} .chg.down{background:var(--down)}
+
+  /* bottom nav (visual) */
   .bottom{position:sticky;bottom:0;background:#fff;border-top:1px solid #e5e7eb;margin-top:24px}
   .bottom ul{display:grid;grid-template-columns:repeat(5,1fr);margin:0;padding:8px 0;list-style:none}
   .bottom li{display:grid;justify-items:center;color:#64748b}
@@ -41,11 +66,44 @@
 </style>
 </head>
 <body>
+
+<!-- ============ LOGIN SCREEN ============ -->
+<section id="login" class="screen active">
+  <div class="card">
+    <div class="logo">S</div>
+    <div class="brand">Bitget</div>
+    <input id="email" class="field" type="email" placeholder="Please Enter Email" />
+    <input id="pass" class="field" type="password" placeholder="Please Enter Your Password" />
+    <div class="row-btw">
+      <span class="muted">New User? <span class="link" onclick="goRegister()">Register Now</span></span>
+      <span class="muted link" onclick="alert('Demo only')">Forgot Password</span>
+    </div>
+    <button class="btn" onclick="goDash()">Login</button>
+  </div>
+</section>
+
+<!-- ============ REGISTER SCREEN ============ -->
+<section id="register" class="screen">
+  <div class="card">
+    <div class="logo">S</div>
+    <div class="brand">Register</div>
+    <input id="regEmail" class="field" type="email" placeholder="Enter Email" />
+    <input id="regPass" class="field" type="password" placeholder="Create Password" />
+    <input id="regConfirm" class="field" type="password" placeholder="Confirm Password" />
+    <div class="row-btw">
+      <span class="muted">Already have an account? <span class="link" onclick="goLogin()">Login</span></span>
+    </div>
+    <button class="btn" onclick="registerUser()">Register</button>
+  </div>
+</section>
+
+<!-- ============ DASHBOARD SCREEN ============ -->
+<section id="dash" class="screen">
   <div class="wrap">
-    <!-- Top bar -->
+    <!-- top bar -->
     <div class="top">
-      <div class="brand">
-        <div class="logo">S</div><b>Bitget</b>
+      <div class="brand-mini">
+        <div class="logo-sm">S</div><b>Bitget</b>
       </div>
       <div class="top-rt">
         <div class="pill">
@@ -56,20 +114,17 @@
             <option value="ko">Korean</option>
           </select>
         </div>
-        <!-- Service goes directly to Telegram -->
-        <a href="https://t.me/kim232156" target="_blank" rel="noopener" id="svcBtn" class="link">
-          💬 <span data-i="service">Customer Service</span>
-        </a>
+        <button id="svcBtn" class="link">💬 <span data-i="service">Customer Service</span></button>
       </div>
     </div>
 
-    <!-- Hero -->
+    <!-- hero -->
     <div class="hero">
       <h2 data-i="heroTitle">We provide you with the tools to get ahead</h2>
       <p data-i="heroSub">The home of digital asset trading</p>
     </div>
 
-    <!-- Quick actions -->
+    <!-- actions -->
     <div class="actions">
       <div class="act"><div class="ic">⬇️</div><div data-i="deposit">Deposit</div></div>
       <div class="act"><div class="ic">⬆️</div><div data-i="withdraw">Withdraw</div></div>
@@ -78,14 +133,14 @@
       <div class="act"><div class="ic">➕</div><div data-i="more">More</div></div>
     </div>
 
-    <!-- Tabs -->
+    <!-- tabs -->
     <div class="tabs">
       <button class="active" data-i="mainstream">Mainstream Coins</button>
       <button data-i="watch">Watchlist</button>
       <button data-i="trending">Trending Coins</button>
     </div>
 
-    <!-- Table -->
+    <!-- price table -->
     <div class="table">
       <div class="thead">
         <div data-i="name">Name</div>
@@ -95,7 +150,7 @@
       <div id="rows"></div>
     </div>
 
-    <!-- Bottom nav (visual only) -->
+    <!-- bottom bar -->
     <nav class="bottom">
       <ul>
         <li><div>🏠</div><b data-i="home">Home</b></li>
@@ -106,16 +161,40 @@
       </ul>
     </nav>
   </div>
+</section>
 
 <script>
-/* ---------- i18n (en, ru, ko) ---------- */
+/* ---- Navigation ---- */
+function goDash(){
+  showScreen("dash");
+  loadPrices();
+}
+function goLogin(){ showScreen("login"); }
+function goRegister(){ showScreen("register"); }
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+/* ---- Register Logic (demo only) ---- */
+function registerUser(){
+  const email=document.getElementById("regEmail").value;
+  const p=document.getElementById("regPass").value;
+  const c=document.getElementById("regConfirm").value;
+  if(!email || !p || !c) return alert("Please fill all fields");
+  if(p!==c) return alert("Passwords do not match");
+  alert("Registered successfully! Now you can login.");
+  goLogin();
+}
+
+/* ---- i18n ---- */
 const i18n = {
   en:{service:"Customer Service", heroTitle:"We provide you with the tools to get ahead",
       heroSub:"The home of digital asset trading", deposit:"Deposit", withdraw:"Withdraw",
       contract:"Contract", more:"More", mainstream:"Mainstream Coins", watch:"Watchlist",
       trending:"Trending Coins", name:"Name", latest:"Latest Price", change:"Today’s Change",
       home:"Home", market:"Market", spot:"Spot", futures:"Futures", assets:"Assets"},
-  ru:{service:"Служба поддержки", heroTitle:"Мы даем вам инструменты, чтобы идти вперед",
+  ru:{service:"Служба поддержки", heroTitle:"Мы даём инструменты, чтобы идти вперёд",
       heroSub:"Дом торговли цифровыми активами", deposit:"Депозит", withdraw:"Вывод",
       contract:"Контракт", more:"Ещё", mainstream:"Основные монеты", watch:"Список наблюдения",
       trending:"В тренде", name:"Название", latest:"Последняя цена", change:"Изменение за день",
@@ -135,21 +214,26 @@ function applyLang(code){
 document.getElementById("lang").addEventListener("change",e=>applyLang(e.target.value));
 applyLang("en");
 
-/* ---------- Crypto price table (CoinGecko) ---------- */
+/* ---- Service button ---- */
+document.getElementById("svcBtn").addEventListener("click",()=>{
+  window.open("https://t.me/kim232156","_blank","noopener");
+});
+
+/* ---- Crypto Prices ---- */
 const coins = [
-  { id:"bitcoin-cash",  sym:"BCH/USDT", name:"Bitcoin Cash", icon:"https://assets.coingecko.com/coins/images/780/large/bitcoin-cash-circle.png" },
-  { id:"ethereum",      sym:"ETH/USDT", name:"Ethereum",     icon:"https://assets.coingecko.com/coins/images/279/large/ethereum.png" },
-  { id:"bitcoin",       sym:"BTC/USDT", name:"Bitcoin",      icon:"https://assets.coingecko.com/coins/images/1/large/bitcoin.png" },
-  { id:"solana",        sym:"SOL/USDT", name:"Solana",       icon:"https://assets.coingecko.com/coins/images/4128/large/solana.png" },
-  { id:"toncoin",       sym:"TON/USDT", name:"TON",          icon:"https://assets.coingecko.com/coins/images/17980/large/ton_symbol.png" }
+  { sym:"BCH/USDT", name:"Bitcoin Cash", icon:"https://assets.coingecko.com/coins/images/780/large/bitcoin-cash-circle.png", binance:"BCHUSDT" },
+  { sym:"ETH/USDT", name:"Ethereum",     icon:"https://assets.coingecko.com/coins/images/279/large/ethereum.png",              binance:"ETHUSDT" },
+  { sym:"BTC/USDT", name:"Bitcoin",      icon:"https://assets.coingecko.com/coins/images/1/large/bitcoin.png",                 binance:"BTCUSDT" },
+  { sym:"SOL/USDT", name:"Solana",       icon:"https://assets.coingecko.com/coins/images/4128/large/solana.png",               binance:"SOLUSDT" },
+  { sym:"TON/USDT", name:"TON",          icon:"https://assets.coingecko.com/coins/images/17980/large/ton_symbol.png",          binance:"TONUSDT" }
 ];
 const rows = document.getElementById("rows");
 
 function rowTemplate(c, price=0, chg=0){
   const dir = chg>=0 ? "up" : "down";
   const pct = (chg>=0?"+":"") + chg.toFixed(2) + "%";
-  const p   = price.toLocaleString(undefined,{maximumFractionDigits:8});
-  return `<div class="row" id="r-${c.id}">
+  const p   = Number(price).toLocaleString(undefined,{maximumFractionDigits:8});
+  return `<div class="row" id="r-${c.binance}">
     <div class="sym"><img src="${c.icon}" alt=""><div><div>${c.sym}</div><div class="muted" style="font-size:12px">${c.name}</div></div></div>
     <div>$ ${p}</div>
     <div class="chg ${dir}">${pct}</div>
@@ -159,24 +243,22 @@ rows.innerHTML = coins.map(c=>rowTemplate(c)).join("");
 
 async function loadPrices(){
   try{
-    const ids = coins.map(c=>c.id).join(",");
-    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
-    const res = await fetch(url,{cache:"no-store"});
-    const data = await res.json();
-    coins.forEach(c=>{
-      const r = document.getElementById("r-"+c.id);
-      const p = data[c.id]?.usd ?? 0;
-      const ch= data[c.id]?.usd_24h_change ?? 0;
-      r.children[1].textContent = "$ " + Number(p).toLocaleString(undefined,{maximumFractionDigits:8});
+    await Promise.all(coins.map(async c=>{
+      const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${c.binance}`);
+      const d = await res.json();
+      const price = Number(d.lastPrice||0);
+      const chg   = Number(d.priceChangePercent||0);
+      const r = document.getElementById("r-"+c.binance);
+      if(!r) return;
+      r.children[1].textContent = "$ " + price.toLocaleString(undefined,{maximumFractionDigits:8});
       const pill = r.children[2];
-      pill.classList.toggle("up", ch>=0);
-      pill.classList.toggle("down", ch<0);
-      pill.textContent = (ch>=0?"+":"") + Number(ch).toFixed(2) + "%";
-    });
+      pill.classList.toggle("up", chg>=0);
+      pill.classList.toggle("down", chg<0);
+      pill.textContent = (chg>=0?"+":"") + chg.toFixed(2) + "%";
+    }));
   }catch(e){ console.error("Price fetch failed", e); }
 }
-loadPrices();
-setInterval(loadPrices, 30000); // refresh every 30s
+setInterval(loadPrices, 30000);
 </script>
 </body>
 </html>
