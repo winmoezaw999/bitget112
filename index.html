@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Bitget-like App (Single File)</title>
+<title>Bitget-like App + Live Spot (Binance WS)</title>
 <style>
   :root{ --primary:#1677ff; --bg:#fff; --muted:#6b7280; --down:#ef4444; --up:#16a34a; }
   *{box-sizing:border-box}
@@ -69,6 +69,39 @@
   .bottom ul{display:grid;grid-template-columns:repeat(5,1fr);margin:0;padding:8px 0;list-style:none}
   .bottom li{display:grid;justify-items:center;color:#64748b;cursor:pointer}
   .bottom li.active{color:#1677ff;font-weight:700}
+
+  /* ================== SPOT PAGE (scoped) ================== */
+  #spotRoot{--line:#e5e7eb}
+  #spotRoot .row{display:flex;gap:12px}
+  #spotRoot .col{flex:1}
+  #spotRoot .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 0 rgba(0,0,0,.02)}
+  #spotRoot .card .hd{padding:10px 12px;border-bottom:1px solid var(--line);font-weight:600;font-size:13px;color:#374151}
+  #spotRoot .p12{padding:12px}
+  #spotRoot .btn{border:0;border-radius:10px;padding:10px 12px;font-weight:600;cursor:pointer}
+  #spotRoot .btn.primary{background:var(--primary);color:#fff} 
+  #spotRoot .btn.block{width:100%}
+  #spotRoot .timebar{display:flex;gap:8px}
+  #spotRoot .timebar button{border:1px solid var(--line);background:#fff;border-radius:18px;padding:6px 10px;font-size:12px;cursor:pointer}
+  #spotRoot .timebar button.active{background:#111827;color:#fff;border-color:#111827}
+  #spotRoot .row-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}
+  #spotRoot .ordergrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  #spotRoot .field{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  #spotRoot .field input{border:0;outline:none;text-align:right;width:140px;background:transparent;font-size:14px}
+  #spotRoot .ob{height:240px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+  #spotRoot .ob ul{list-style:none;margin:0;padding:0}
+  #spotRoot .ob li{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 10px;font-variant-numeric:tabular-nums}
+  #spotRoot .ask{color:var(--down)} 
+  #spotRoot .bid{color:var(--up)}
+  #spotRoot .price-big{font-weight:800;font-size:24px}
+  #spotRoot .sub{font-size:12px}
+  #spotRoot canvas{display:block;width:100%;height:280px}
+  #spotRoot .legend{display:flex;gap:12px;align-items:center;font-size:12px}
+  #spotRoot .dot{width:10px;height:3px;border-radius:2px;display:inline-block}
+  #spotRoot .ma5{background:#f59e0b}.ma10{background:#60a5fa}.ma30{background:#a78bfa}
+  #spotRoot .select{border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:#fff;font-weight:700}
+  #spotRoot .badge{border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:12px;cursor:pointer;background:#fff}
+  #spotRoot .slider-row{display:flex;align-items:center;gap:10px}
+  #spotRoot .slider-row input[type=range]{flex:1}
 </style>
 </head>
 <body>
@@ -168,10 +201,151 @@
       </div>
     </div>
 
-    <!-- ========== SPOT PAGE ========== -->
+    <!-- ========== SPOT PAGE (LIVE) ========== -->
     <div id="pg-spot" class="page">
-      <h2>💱 Spot</h2>
-      <p class="muted">Spot trading features (placeholder).</p>
+      <div id="spotRoot">
+        <!-- Header -->
+        <div class="row" style="align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="row" style="align-items:center;gap:8px">
+            <div class="select"><span id="symbolLabel">ETH</span> <span class="muted">/ USDT</span></div>
+            <div class="badge" id="symbolToggle" title="Choose coin">▼</div>
+            <div class="timebar" id="timebar">
+              <button data-int="1m" class="active">1M</button>
+              <button data-int="5m">5M</button>
+              <button data-int="15m">15M</button>
+              <button data-int="30m">30M</button>
+              <button data-int="1h">1H</button>
+              <button data-int="1d">1D</button>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div id="lastPrice" class="price-big">—</div>
+            <div id="chg" class="sub muted">—</div>
+          </div>
+        </div>
+
+        <!-- Quick coin list -->
+        <div id="coinList" class="row" style="gap:8px;flex-wrap:wrap;display:none;margin-bottom:6px">
+          <button class="badge coin">BTC</button>
+          <button class="badge coin active">ETH</button>
+          <button class="badge coin">BCH</button>
+          <button class="badge coin">EOS</button>
+          <button class="badge coin">TRX</button>
+          <button class="badge coin">XRP</button>
+          <button class="badge coin">SOL</button>
+        </div>
+
+        <div class="legend" style="margin-bottom:6px">
+          <span class="muted">MA5:</span><span class="dot ma5"></span>
+          <span class="muted">MA10:</span><span class="dot ma10"></span>
+          <span class="muted">MA30:</span><span class="dot ma30"></span>
+        </div>
+
+        <!-- Chart + Orderbook -->
+        <div class="row-grid">
+          <div class="card p12"><canvas id="chart" width="800" height="280"></canvas></div>
+          <div class="card">
+            <div class="hd">Order Book (<span id="obSym">ETH/USDT</span>)</div>
+            <div class="p12 ordergrid">
+              <div><div class="sub muted" style="margin-bottom:6px">Asks (Sell)</div><div class="ob"><ul id="asks"></ul></div></div>
+              <div><div class="sub muted" style="margin-bottom:6px">Bids (Buy)</div><div class="ob"><ul id="bids"></ul></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trade box -->
+        <div class="row" style="margin-top:12px">
+          <div class="col card p12">
+            <div class="tabs" id="sideTabs" style="margin-bottom:10px">
+              <button class="active" data-side="buy">Buy</button>
+              <button data-side="sell">Sell</button>
+            </div>
+
+            <div class="tabs" id="typeTabs" style="margin-bottom:10px">
+              <button class="active" data-type="market">Market</button>
+              <button data-type="limit">Limit</button>
+            </div>
+
+            <div id="marketBox">
+              <div class="muted sub" style="margin-bottom:6px">Market Order</div>
+              <div class="field" style="margin-bottom:8px">
+                <span class="muted">Price (USDT)</span><span id="priceField">—</span>
+              </div>
+            </div>
+
+            <div id="limitBox" style="display:none">
+              <div class="muted sub" style="margin-bottom:6px">Limit Order</div>
+              <div class="field" style="margin-bottom:8px">
+                <span class="muted">Limit Price (USDT)</span>
+                <input id="limitPrice" type="number" step="0.01" placeholder="0.00"/>
+              </div>
+            </div>
+
+            <div class="field" style="margin-bottom:8px">
+              <span class="muted">Amount (<span id="baseLabel">ETH</span>)</span>
+              <input id="amt" type="number" min="0" step="0.000001" placeholder="0"/>
+            </div>
+
+            <div class="slider-row" style="margin-bottom:8px">
+              <span class="muted" style="width:28px">0%</span>
+              <input id="percent" type="range" min="0" max="100" step="5" value="0"/>
+              <span class="muted" style="width:40px;text-align:right" id="pctOut">0%</span>
+            </div>
+
+            <div class="sub muted" id="infoRow" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+              <div>Available: <b id="avail">—</b></div>
+              <div>Buyable: <b id="buyable">—</b></div>
+              <div>Estimated Fee: <b id="fee">0 USDT</b></div>
+            </div>
+
+            <button id="submitBtn" class="btn primary block">Buy <span id="baseLabel3">ETH</span></button>
+            <div class="sub muted" style="margin-top:8px">
+              Balance: <span id="balQuote">1000.00 USDT</span> | <span id="balBase">0.000000 <span id="baseLabel2">ETH</span></span> (demo)
+            </div>
+          </div>
+
+          <div class="col card">
+            <div class="hd">Recent Trades</div>
+            <div class="p12 ob" style="height:298px"><ul id="trades"></ul></div>
+          </div>
+        </div>
+
+        <!-- Orders / Holdings / History -->
+        <div class="card" style="margin-top:12px">
+          <div class="p12">
+            <div class="tabs" id="infoTabs" style="margin-bottom:10px">
+              <button class="active" data-tab="current">Current Orders</button>
+              <button data-tab="holdings">Holdings</button>
+              <button data-tab="history">History Orders</button>
+            </div>
+
+            <div id="tab-current">
+              <table class="table" id="tblCurrent">
+                <thead><tr><th>Time</th><th>Side</th><th>Type</th><th>Price</th><th>Amount</th><th>Status</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <div id="tab-holdings" style="display:none">
+              <table class="table">
+                <thead><tr><th>Asset</th><th>Amount</th><th>Value (USDT)</th></tr></thead>
+                <tbody>
+                  <tr><td id="h-quote-lbl">USDT</td><td id="h-quote-amt" style="text-align:right">1000.00</td><td id="h-quote-val" style="text-align:right">1000.00</td></tr>
+                  <tr><td id="h-base-lbl">ETH</td><td id="h-base-amt" style="text-align:right">0.000000</td><td id="h-base-val" style="text-align:right">0.00</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div id="tab-history" style="display:none">
+              <table class="table" id="tblHistory">
+                <thead><tr><th>Time</th><th>Side</th><th>Type</th><th>Price</th><th>Amount</th><th>Filled</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div> <!-- /spotRoot -->
     </div>
 
     <!-- ========== FUTURES PAGE ========== -->
@@ -255,33 +429,24 @@ document.addEventListener("click",e=>{
 });
 
 /* ------------ Bottom Nav -> switch pages ------------- */
-const pageIds = {
-  home: "pg-home",
-  market: "pg-market",
-  spot: "pg-spot",
-  futures: "pg-futures",
-  assets: "pg-assets"
-};
+const pageIds = { home:"pg-home", market:"pg-market", spot:"pg-spot", futures:"pg-futures", assets:"pg-assets" };
 document.getElementById("bottomNav").addEventListener("click",(e)=>{
   const li = e.target.closest("li[data-tab]"); if(!li) return;
-  // activate nav
   document.querySelectorAll("#bottomNav li").forEach(x=>x.classList.remove("active"));
   li.classList.add("active");
-  // show page
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   const pid = pageIds[li.dataset.tab];
   document.getElementById(pid).classList.add("active");
 });
 
-/* ------------ Crypto Prices (Binance) ------------- */
+/* ------------ Crypto Prices (Binance REST) ------------- */
 const coins = [
   { sym:"BCH/USDT", name:"Bitcoin Cash", icon:"https://assets.coingecko.com/coins/images/780/large/bitcoin-cash-circle.png", binance:"BCHUSDT" },
   { sym:"ETH/USDT", name:"Ethereum",     icon:"https://assets.coingecko.com/coins/images/279/large/ethereum.png",              binance:"ETHUSDT" },
   { sym:"BTC/USDT", name:"Bitcoin",      icon:"https://assets.coingecko.com/coins/images/1/large/bitcoin.png",                 binance:"BTCUSDT" },
   { sym:"SOL/USDT", name:"Solana",       icon:"https://assets.coingecko.com/coins/images/4128/large/solana.png",               binance:"SOLUSDT" },
-  { sym:"TON/USDT", name:"TON",          icon:"https://assets.coingecko.com/coins/images/17980/large/ton_symbol.png",          binance:"TONUSDT" }
+  { sym:"TRX/USDT", name:"TRON",         icon:"https://assets.coingecko.com/coins/images/1094/large/tron-logo.png",            binance:"TRXUSDT" }
 ];
-
 function rowTemplate(c, price=0, chg=0){
   const dir = chg>=0 ? "up" : "down";
   const pct = (chg>=0?"+":"") + chg.toFixed(2) + "%";
@@ -292,12 +457,10 @@ function rowTemplate(c, price=0, chg=0){
     <div class="chg ${dir}">${pct}</div>
   </div>`;
 }
-
 const rowsHome   = document.getElementById("rows-home");
 const rowsMarket = document.getElementById("rows-market");
 rowsHome.innerHTML   = coins.map(c=>rowTemplate(c)).join("");
 rowsMarket.innerHTML = coins.map(c=>rowTemplate(c)).join("");
-
 async function loadPrices(){
   try{
     await Promise.all(coins.map(async c=>{
@@ -305,21 +468,307 @@ async function loadPrices(){
       const d = await res.json();
       const price = Number(d.lastPrice||0);
       const chg   = Number(d.priceChangePercent||0);
-      // update both places if they exist
-      ["r-"+c.binance].forEach(id=>{
-        document.querySelectorAll("#"+id).forEach(r=>{
-          r.children[1].textContent = "$ " + price.toLocaleString(undefined,{maximumFractionDigits:8});
-          const pill = r.children[2];
-          pill.classList.toggle("up", chg>=0);
-          pill.classList.toggle("down", chg<0);
-          pill.textContent = (chg>=0?"+":"") + chg.toFixed(2) + "%";
-        });
-      });
+      const elem = document.getElementById("r-"+c.binance);
+      if(!elem) return;
+      elem.children[1].textContent = "$ " + price.toLocaleString(undefined,{maximumFractionDigits:8});
+      const pill = elem.children[2];
+      pill.classList.toggle("up", chg>=0);
+      pill.classList.toggle("down", chg<0);
+      pill.textContent = (chg>=0?"+":"") + chg.toFixed(2) + "%";
     }));
   }catch(e){ console.error("Price fetch failed", e); }
 }
 setInterval(loadPrices, 30000);
 loadPrices();
+
+/* ======================= SPOT (BINANCE WS) ======================= */
+(function(){
+  const $ = s=>document.querySelector(s);
+
+  // Elements
+  const priceEl = $('#lastPrice'), chgEl = $('#chg'), priceField = $('#priceField');
+  const asksEl = $('#asks'), bidsEl = $('#bids'), tradesEl = $('#trades');
+  const submitBtn = $('#submitBtn'), sideTabs = $('#sideTabs'), typeTabs = $('#typeTabs');
+  const amt = $('#amt'), limitBox = $('#limitBox'), marketBox = $('#marketBox'), limitPrice = $('#limitPrice');
+  const percent = $('#percent'), pctOut = $('#pctOut');
+  const baseLabel = $('#baseLabel'), baseLabel2 = $('#baseLabel2'), baseLabel3 = $('#baseLabel3');
+  const balQuote = $('#balQuote'), balBase = $('#balBase');
+  const symLabel = $('#symbolLabel'), obSym = $('#obSym'), coinList = $('#coinList');
+
+  // Orders/Holdings tabs
+  const infoTabs = $('#infoTabs');
+  const tabCurrent = $('#tab-current'), tabHoldings = $('#tab-holdings'), tabHistory = $('#tab-history');
+  const tblCurrent = $('#tblCurrent tbody'), tblHistory = $('#tblHistory tbody');
+  const hQuoteLbl = $('#h-quote-lbl'), hBaseLbl = $('#h-base-lbl');
+  const hQuoteAmt = $('#h-quote-amt'), hBaseAmt = $('#h-base-amt');
+  const hQuoteVal = $('#h-quote-val'), hBaseVal = $('#h-base-val');
+
+  // Chart
+  const canvas = document.getElementById('chart');
+  const ctx = canvas.getContext('2d');
+  let klines = []; let interval = '1m'; let lastClose = null;
+
+  // Demo balances & state
+  let side='buy', type='market';
+  let quoteBal = 1000; // USDT
+  let baseBal  = 0;    // coin
+  let base='ETH', symbolStream='ethusdt';
+  let bestAsk=null, bestBid=null;
+
+  function fmt(n, d=2){ return (+n).toFixed(d); }
+
+  // coin switcher toggle
+  document.getElementById('symbolToggle').addEventListener('click',()=>{
+    coinList.style.display = coinList.style.display==='none'?'flex':'none';
+  });
+  coinList.addEventListener('click',e=>{
+    if(!e.target.classList.contains('coin')) return;
+    [...coinList.children].forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    base = e.target.textContent.trim().toUpperCase();
+    symLabel.textContent = base; obSym.textContent = base+'/USDT';
+    baseLabel.textContent = base; baseLabel2.textContent = base; baseLabel3.textContent = base;
+    hBaseLbl.textContent = base;
+    symbolStream = base.toLowerCase()+'usdt';
+    // reset demo balances for sample
+    quoteBal = 1000; baseBal = 0; updateBalances();
+    // reset boards
+    klines=[]; lastClose=null; bestAsk=bestBid=null;
+    reconnectAll();
+  });
+
+  // timeframe
+  document.getElementById('timebar').addEventListener('click',e=>{
+    if(e.target.tagName!=='BUTTON') return;
+    [...e.currentTarget.children].forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    interval = e.target.dataset.int;
+    klines=[]; lastClose=null;
+    reconnectKline();
+  });
+
+  // side tabs
+  sideTabs.addEventListener('click',e=>{
+    if(e.target.tagName!=='BUTTON') return;
+    [...sideTabs.children].forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    side = e.target.dataset.side;
+    submitBtn.classList.toggle('primary', side==='buy');
+    submitBtn.style.background = side==='buy'? 'var(--primary)' : '#f3f4f6';
+    submitBtn.style.color = side==='buy'? '#fff' : '#111827';
+    submitBtn.innerHTML = (side==='buy'?'Buy ':'Sell ')+`<span>${base}</span>`;
+    autoLimitFromBook(); updateSliderAmount(); updateInfoRow();
+  });
+
+  // type tabs
+  typeTabs.addEventListener('click',e=>{
+    if(e.target.tagName!=='BUTTON') return;
+    [...typeTabs.children].forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    type = e.target.dataset.type;
+    marketBox.style.display = type==='market'?'block':'none';
+    limitBox.style.display  = type==='limit'?'block':'none';
+    autoLimitFromBook();
+  });
+
+  // percentage slider & amount
+  percent.addEventListener('input', ()=>{
+    pctOut.textContent = percent.value+'%';
+    updateSliderAmount(); updateInfoRow();
+  });
+  amt.addEventListener('input', ()=>{
+    const p = parseFloat(priceField.textContent)||0;
+    let pct = 0;
+    if(side==='buy' && p>0) pct = Math.min(100, (parseFloat(amt.value||0)*p)/Math.max(1e-12,quoteBal)*100);
+    if(side==='sell' && baseBal>0) pct = Math.min(100, (parseFloat(amt.value||0))/baseBal*100);
+    percent.value = isFinite(pct)? Math.max(0, pct):0; pctOut.textContent = fmt(percent.value,0)+'%';
+    updateInfoRow();
+  });
+
+  // Orders/Holdings tabs
+  infoTabs.addEventListener('click',e=>{
+    if(e.target.tagName!=='BUTTON') return;
+    [...infoTabs.children].forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    const t=e.target.dataset.tab;
+    tabCurrent.style.display = t==='current'?'block':'none';
+    tabHoldings.style.display= t==='holdings'?'block':'none';
+    tabHistory.style.display = t==='history'?'block':'none';
+  });
+
+  // submit (demo)
+  let orderId=1; const openOrders=[];
+  submitBtn.addEventListener('click',()=>{
+    const a = parseFloat(amt.value||'0'); if(!a){ alert('Enter amount'); return; }
+    const mpx = parseFloat(priceField.textContent||'0')||0;
+    const lpx = parseFloat(limitPrice.value||'0')||0;
+    const px  = type==='market'? mpx : lpx; if(!px){ alert('Invalid price'); return; }
+
+    if(side==='buy' && quoteBal < a*px){ alert('Insufficient USDT (demo)'); return; }
+    if(side==='sell' && baseBal  < a){ alert('Insufficient '+base+' (demo)'); return; }
+
+    const now = new Date().toLocaleTimeString();
+    if(type==='market'){
+      // fill immediately
+      fillTrade({time:now, side, type, price:px, amount:a});
+      addRow(tblHistory,[now, side.toUpperCase(), 'MARKET', fmt(px,2), fmt(a,6), 'FILLED']);
+    }else{
+      // limit -> add to current
+      const ord = {id:orderId++, time:now, side, type:'LIMIT', price:px, amount:a, status:'OPEN'};
+      openOrders.push(ord); paintCurrent();
+    }
+    // reset amount
+    percent.value=0; pctOut.textContent='0%'; amt.value='';
+    updateInfoRow();
+  });
+
+  function fillTrade({time,side,type,price,amount}){
+    if(side==='buy'){ quoteBal -= amount*price; baseBal += amount; }
+    else { baseBal -= amount; quoteBal += amount*price; }
+    updateBalances();
+  }
+  function paintCurrent(){
+    tblCurrent.innerHTML='';
+    openOrders.forEach(o=>{
+      addRow(tblCurrent,[o.time, o.side.toUpperCase(), o.type, fmt(o.price,2), fmt(o.amount,6), o.status]);
+    });
+  }
+  function addRow(tbody, cols){
+    const tr=document.createElement('tr'); cols.forEach(c=>{const td=document.createElement('td'); td.textContent=c; tr.appendChild(td)});
+    tbody.prepend(tr);
+  }
+
+  // WebSockets
+  let wsK=null, wsD=null, wsT=null;
+  function closeWS(ws){ try{ws&&ws.close()}catch(_){} }
+  function reconnectAll(){ reconnectKline(); reconnectDepth(); reconnectTrade(); }
+  function reconnectKline(){
+    closeWS(wsK);
+    wsK = new WebSocket(`wss://stream.binance.com:9443/ws/${symbolStream}@kline_${interval}`);
+    wsK.onmessage = e=>{
+      const k = JSON.parse(e.data).k;
+      const c = {t:k.t,o:+k.o,h:+k.h,l:+k.l,c:+k.c,v:+k.v};
+      upsertKline(c); updatePrice(c.c); tryMatchLimits();
+    };
+  }
+  function reconnectDepth(){
+    closeWS(wsD);
+    wsD = new WebSocket(`wss://stream.binance.com:9443/ws/${symbolStream}@depth10@100ms`);
+    let seq=0;
+    wsD.onmessage = e=>{
+      const d=JSON.parse(e.data); if(d.u<=seq) return; seq=d.u;
+      drawBook(asksEl,d.asks.slice(0,10),true); drawBook(bidsEl,d.bids.slice(0,10),false);
+      if(d.asks.length) bestAsk = +d.asks[0][0];
+      if(d.bids.length) bestBid = +d.bids[0][0];
+      autoLimitFromBook(); tryMatchLimits();
+    };
+  }
+  function reconnectTrade(){
+    closeWS(wsT);
+    wsT = new WebSocket(`wss://stream.binance.com:9443/ws/${symbolStream}@trade`);
+    wsT.onmessage = e=>{
+      const d = JSON.parse(e.data);
+      const li=document.createElement('li'); li.className=d.m?'ask':'bid';
+      li.style.display='grid'; li.style.gridTemplateColumns='1fr 1fr'; li.style.padding='6px 10px'; li.style.fontVariantNumeric='tabular-nums';
+      li.innerHTML = `<span>${(+d.p).toFixed(2)}</span><span style="text-align:right">${(+d.q).toFixed(4)}</span>`;
+      tradesEl.prepend(li); while(tradesEl.children.length>40) tradesEl.removeChild(tradesEl.lastChild);
+      priceField.textContent=(+d.p).toFixed(2); updateSliderAmount(); updateInfoRow();
+    };
+  }
+  function drawBook(root, rows, isAsk){
+    root.innerHTML='';
+    rows.forEach(([p,q])=>{
+      const li=document.createElement('li'); li.className=isAsk?'ask':'bid';
+      li.innerHTML=`<span>${(+p).toFixed(2)}</span><span style="text-align:right">${(+q).toFixed(4)}</span>`;
+      root.appendChild(li);
+    });
+  }
+  function autoLimitFromBook(){
+    if(type!=='limit') return;
+    if(side==='buy' && bestAsk) limitPrice.value = bestAsk.toFixed(2);
+    if(side==='sell' && bestBid) limitPrice.value = bestBid.toFixed(2);
+  }
+  function updatePrice(p){
+    priceEl.textContent = fmt(p,2); priceField.textContent = fmt(p,2);
+    if(lastClose){
+      const pct=((p-lastClose)/lastClose)*100;
+      chgEl.textContent=(pct>=0?'+':'')+fmt(pct,2)+'%';
+      chgEl.style.color=pct>=0?'var(--up)':'var(--down)'; priceEl.style.color=chgEl.style.color;
+    }
+    updateInfoRow();
+  }
+  function upsertKline(k){
+    const i = klines.findIndex(x=>x.t===k.t);
+    if(i>=0) klines[i]=k; else { if(klines.length) lastClose = klines[klines.length-1].c; klines.push(k); if(klines.length>240) klines.shift(); }
+    drawChart();
+  }
+  function sma(a,n){const out=[],q=[];let s=0;for(let i=0;i<a.length;i++){q.push(a[i]);s+=a[i];if(q.length>n)s-=q.shift();out.push(q.length===n? s/n : null)}return out;}
+  function drawChart(){
+    const W=canvas.width,H=canvas.height; ctx.clearRect(0,0,W,H);
+    const n=Math.min(120,klines.length), data=klines.slice(-n); if(!data.length) return;
+    const highs=data.map(d=>d.h), lows=data.map(d=>d.l);
+    const max=Math.max(...highs), min=Math.min(...lows), pad=(max-min)*0.08||10;
+    const top=max+pad, bot=min-pad, xw=W/n, y=v=>H-((v-bot)/(top-bot))*H;
+
+    ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1; ctx.beginPath();
+    for(let i=1;i<5;i++){const yy=H*i/5; ctx.moveTo(0,yy); ctx.lineTo(W,yy);} ctx.stroke();
+
+    for(let i=0;i<data.length;i++){
+      const d=data[i], x=i*xw+xw*0.5;
+      ctx.strokeStyle='#374151'; ctx.beginPath(); ctx.moveTo(x,y(d.h)); ctx.lineTo(x,y(d.l)); ctx.stroke();
+      const up=d.c>=d.o, bh=Math.max(1,Math.abs(y(d.o)-y(d.c))), by=y(Math.max(d.o,d.c));
+      ctx.fillStyle=up?'#16a34a':'#ef4444'; ctx.fillRect(x-xw*0.28,by,xw*0.56,bh);
+    }
+    const closes=data.map(d=>d.c), ma5=sma(closes,5), ma10=sma(closes,10), ma30=sma(closes,30);
+    const line=(s,c)=>{ctx.beginPath();let st=false;for(let i=0;i<s.length;i++){const v=s[i];if(v==null)continue;const x=i*xw+xw*0.5,yy=y(v);if(!st){ctx.moveTo(x,yy);st=true}else ctx.lineTo(x,yy)}ctx.strokeStyle=c;ctx.lineWidth=1.5;ctx.stroke();}
+    line(ma5,'#f59e0b'); line(ma10,'#60a5fa'); line(ma30,'#a78bfa');
+  }
+
+  // balances / info
+  function updateBalances(){
+    balQuote.textContent = fmt(quoteBal,2)+' USDT';
+    balBase.innerHTML = `${fmt(baseBal,6)} <span>${base}</span>`;
+    hQuoteAmt.textContent = fmt(quoteBal,2);
+    hBaseAmt.textContent  = fmt(baseBal,6);
+    const p = parseFloat(priceField.textContent)||0;
+    hQuoteVal.textContent = fmt(quoteBal,2);
+    hBaseVal.textContent  = fmt(baseBal*p,2);
+    updateInfoRow();
+  }
+  function updateSliderAmount(){
+    const p = parseFloat(priceField.textContent)||0;
+    if(side==='buy'){ const use=quoteBal*(percent.value/100); amt.value = p? (use/p).toFixed(6) : 0; }
+    else{ amt.value = (baseBal*(percent.value/100)).toFixed(6); }
+  }
+  function updateInfoRow(){
+    const p = parseFloat(priceField.textContent)||0;
+    document.getElementById('avail').textContent   = side==='buy' ? `${fmt(quoteBal,2)} USDT` : `${fmt(baseBal,6)} ${base}`;
+    const buyable = p ? quoteBal/p : 0;
+    document.getElementById('buyable').textContent = side==='buy' ? `${fmt(buyable,6)} ${base}` : `${fmt(baseBal*p,2)} USDT`;
+  }
+
+  // match limit orders when market crosses
+  function tryMatchLimits(){
+    if(!openOrders.length) return;
+    const crossed = [];
+    openOrders.forEach(o=>{
+      if(o.side==='buy'  && bestAsk && bestAsk<=o.price) crossed.push(o);
+      if(o.side==='sell' && bestBid && bestBid>=o.price) crossed.push(o);
+    });
+    crossed.forEach(o=>{
+      const px = o.side==='buy'? Math.min(o.price,bestAsk||o.price): Math.max(o.price,bestBid||o.price);
+      fillTrade({time:o.time, side:o.side, type:o.type, price:px, amount:o.amount});
+      addRow(tblHistory,[o.time, o.side.toUpperCase(), 'LIMIT', fmt(px,2), fmt(o.amount,6), 'FILLED']);
+      const idx=openOrders.indexOf(o); if(idx>-1) openOrders.splice(idx,1);
+    });
+    if(crossed.length) paintCurrent();
+  }
+
+  // init
+  reconnectAll(); updateBalances(); updateInfoRow();
+
+  function reconnectAll(){ reconnectKline(); reconnectDepth(); reconnectTrade(); }
+})();
 </script>
 </body>
 </html>
